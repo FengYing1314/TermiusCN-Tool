@@ -83,7 +83,7 @@
                         Margin="12,0">
                         <InfoBar.Content>
                             <TextBlock 
-                                Text="v1.0.0" 
+                                Text="v1.1.0" 
                                 FontSize="12"
                                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                         </InfoBar.Content>

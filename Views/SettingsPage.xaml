@@ -152,7 +152,7 @@
                        CornerRadius="8">
                 <TextBlock Text="关于" Style="{StaticResource SubtitleTextBlockStyle}"/>
                 <TextBlock TextWrapping="Wrap">
-                    <Run Text="Termius 汉化工具 v1.0"/>
+                    <Run Text="Termius 汉化工具 v1.1.0"/>
                     <LineBreak/>
                     <Run Text="基于 .NET 10 + WinUI 3 开发" FontSize="12" Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                     <LineBreak/>
