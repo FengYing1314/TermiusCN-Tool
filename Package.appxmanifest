@@ -8,15 +8,15 @@
   IgnorableNamespaces="uap rescap">
 
   <Identity
-    Name="c8038bac-bcbc-439d-87f7-a5ba90844acd"
-    Publisher="CN=fying"
+    Name="FengYing.TermiusCN-Tool"
+    Publisher="CN=枫莹"
     Version="1.1.0.0" />
 
   <mp:PhoneIdentity PhoneProductId="c8038bac-bcbc-439d-87f7-a5ba90844acd" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
     <DisplayName>TermiusCN-Tool</DisplayName>
-    <PublisherDisplayName>fying</PublisherDisplayName>
+    <PublisherDisplayName>枫莹</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
@@ -41,6 +41,7 @@
         Square44x44Logo="Assets\Square44x44Logo.png">
         <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
         <uap:SplashScreen Image="Assets\SplashScreen.png" />
+        <uap:LockScreen BadgeLogo="Assets\BadgeLogo.png" Notification="badge"/>
       </uap:VisualElements>
     </Application>
   </Applications>

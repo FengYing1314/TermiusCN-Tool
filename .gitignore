@@ -44,6 +44,13 @@ _ReSharper*/
 *.appx
 *.appxbundle
 *.appxupload
+*.msix
+*.msixbundle
+*.msixupload
+AppPackages/
+
+# Certificate files (private keys - DO NOT COMMIT)
+*.pfx
 
 # NuGet Packages
 *.nupkg

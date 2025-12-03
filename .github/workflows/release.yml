@@ -59,13 +59,43 @@ jobs:
         run: Compress-Archive -Path publish/portable-arm64/* -DestinationPath TermiusCN-Tool-${{ github.ref_name }}-Portable-arm64.zip
 
       # ========== MSIX 安装包 ==========
+      - name: Decode signing certificate
+        if: ${{ secrets.SIGNING_CERTIFICATE != '' }}
+        run: |
+          $certBytes = [Convert]::FromBase64String("${{ secrets.SIGNING_CERTIFICATE }}")
+          [IO.File]::WriteAllBytes("${{ github.workspace }}\SigningCertificate.pfx", $certBytes)
+          Write-Host "Certificate decoded successfully"
+
       - name: Build MSIX x64
         run: |
-          msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=x64 /p:RuntimeIdentifier=win-x64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=false /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\
+          $signingEnabled = if ("${{ secrets.SIGNING_CERTIFICATE }}" -ne "") { "true" } else { "false" }
+          $certFile = if ($signingEnabled -eq "true") { "/p:PackageCertificateKeyFile=${{ github.workspace }}\SigningCertificate.pfx /p:PackageCertificatePassword=${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}" } else { "" }
+          $cmd = "msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=x64 /p:RuntimeIdentifier=win-x64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=$signingEnabled /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\ $certFile"
+          Write-Host "Running: $cmd"
+          Invoke-Expression $cmd
 
       - name: Build MSIX ARM64
         run: |
-          msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=ARM64 /p:RuntimeIdentifier=win-arm64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=false /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\
+          $signingEnabled = if ("${{ secrets.SIGNING_CERTIFICATE }}" -ne "") { "true" } else { "false" }
+          $certFile = if ($signingEnabled -eq "true") { "/p:PackageCertificateKeyFile=${{ github.workspace }}\SigningCertificate.pfx /p:PackageCertificatePassword=${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}" } else { "" }
+          $cmd = "msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=ARM64 /p:RuntimeIdentifier=win-arm64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=$signingEnabled /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\ $certFile"
+          Write-Host "Running: $cmd"
+          Invoke-Expression $cmd
+
+      - name: Export public certificate (.cer)
+        if: ${{ secrets.SIGNING_CERTIFICATE != '' }}
+        run: |
+          $password = ConvertTo-SecureString -String "${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}" -Force -AsPlainText
+          $cert = Get-PfxCertificate -FilePath "${{ github.workspace }}\SigningCertificate.pfx" -Password $password
+          Export-Certificate -Cert $cert -FilePath "TermiusCN-Tool.cer"
+          Write-Host "Public certificate exported"
+
+      - name: Clean up certificate
+        if: always()
+        run: |
+          if (Test-Path "${{ github.workspace }}\SigningCertificate.pfx") {
+            Remove-Item "${{ github.workspace }}\SigningCertificate.pfx" -Force
+          }
 
       - name: Find and Copy MSIX files
         run: |
@@ -104,18 +134,32 @@ jobs:
             TermiusCN-Tool-${{ github.ref_name }}-Portable-arm64.zip
             TermiusCN-Tool-${{ github.ref_name }}-x64.msix
             TermiusCN-Tool-${{ github.ref_name }}-arm64.msix
+            TermiusCN-Tool.cer
+            Install-App.ps1
           generate_release_notes: true
           fail_on_unmatched_files: false
           body: |
             ## 下载说明
             
-            ### 📦 MSIX 安装包
+            ### 📦 MSIX 安装包（推荐）
             - `TermiusCN-Tool-${{ github.ref_name }}-x64.msix` - 64位 Windows 安装包
             - `TermiusCN-Tool-${{ github.ref_name }}-arm64.msix` - ARM64 Windows 安装包
             
-            > ⚠️ 首次安装 MSIX 需要在「设置 → 隐私和安全性 → 开发者选项」中启用「开发人员模式」或「旁加载应用」
+            #### 安装方法
+            **方法一：使用安装脚本（推荐）**
+            1. 下载 `TermiusCN-Tool-${{ github.ref_name }}-x64.msix`、`TermiusCN-Tool.cer` 和 `Install-App.ps1`
+            2. 将三个文件放在同一目录
+            3. 右键 `Install-App.ps1` → 使用 PowerShell 运行（需要管理员权限）
             
-            ### 📂 便携版 (解压即用)
+            **方法二：手动安装**
+            1. 双击 `TermiusCN-Tool.cer` → 安装证书 → 本地计算机 → 受信任的人
+            2. 双击 `.msix` 文件安装
+            
+            **方法三：开发者模式**
+            1. 打开「设置 → 系统 → 开发者选项」→ 启用「开发人员模式」
+            2. 双击 `.msix` 文件安装
+            
+            ### 📂 便携版（解压即用）
             - `TermiusCN-Tool-${{ github.ref_name }}-Portable-x64.zip` - 64位 Windows 便携版
             - `TermiusCN-Tool-${{ github.ref_name }}-Portable-arm64.zip` - ARM64 Windows 便携版
             

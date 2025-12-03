@@ -69,5 +69,8 @@
   <PropertyGroup>
     <PublishReadyToRun Condition="'$(Configuration)' == 'Debug'">False</PublishReadyToRun>
     <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
+    <PackageCertificateThumbprint>857C77538027E65C07789B53AEF5108FD088BDB0</PackageCertificateThumbprint>
+    <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
+    <DefaultLanguage>zh-cn</DefaultLanguage>
   </PropertyGroup>
 </Project>
