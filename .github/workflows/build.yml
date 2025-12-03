@@ -1,0 +1,185 @@
+name: Manual Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_portable:
+        description: '构建便携版'
+        type: boolean
+        default: true
+      build_msix:
+        description: '构建 MSIX 安装包'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      # ========== 便携版 (Portable) ==========
+      - name: Build Portable x64
+        if: ${{ inputs.build_portable }}
+        run: dotnet publish TermiusCN-Tool.csproj -c Release -r win-x64 -p:Platform=x64 -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true --self-contained true -o publish/portable-x64
+
+      - name: Build Portable ARM64
+        if: ${{ inputs.build_portable }}
+        run: dotnet publish TermiusCN-Tool.csproj -c Release -r win-arm64 -p:Platform=ARM64 -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true --self-contained true -o publish/portable-arm64
+
+      - name: Create Portable x64 Archive
+        if: ${{ inputs.build_portable }}
+        run: Compress-Archive -Path publish/portable-x64/* -DestinationPath TermiusCN-Tool-Portable-x64.zip
+
+      - name: Create Portable ARM64 Archive
+        if: ${{ inputs.build_portable }}
+        run: Compress-Archive -Path publish/portable-arm64/* -DestinationPath TermiusCN-Tool-Portable-arm64.zip
+
+      # ========== MSIX 安装包 ==========
+      - name: Decode signing certificate
+        if: ${{ inputs.build_msix }}
+        env:
+          SIGNING_CERT: ${{ secrets.SIGNING_CERTIFICATE }}
+        run: |
+          if ("$env:SIGNING_CERT" -ne "") {
+            $certBytes = [Convert]::FromBase64String("$env:SIGNING_CERT")
+            [IO.File]::WriteAllBytes("${{ github.workspace }}\SigningCertificate.pfx", $certBytes)
+            Write-Host "Certificate decoded successfully"
+          } else {
+            Write-Host "No signing certificate configured, will build unsigned MSIX"
+          }
+
+      - name: Build MSIX x64
+        if: ${{ inputs.build_msix }}
+        env:
+          SIGNING_CERT: ${{ secrets.SIGNING_CERTIFICATE }}
+          SIGNING_CERT_PWD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
+        run: |
+          $hasCert = "$env:SIGNING_CERT" -ne ""
+          $signingEnabled = if ($hasCert) { "true" } else { "false" }
+          $certFile = if ($hasCert) { "/p:PackageCertificateKeyFile=${{ github.workspace }}\SigningCertificate.pfx /p:PackageCertificatePassword=$env:SIGNING_CERT_PWD" } else { "" }
+          $cmd = "msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=x64 /p:RuntimeIdentifier=win-x64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=$signingEnabled /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\ $certFile"
+          Write-Host "Running: $cmd"
+          Invoke-Expression $cmd
+
+      - name: Build MSIX ARM64
+        if: ${{ inputs.build_msix }}
+        env:
+          SIGNING_CERT: ${{ secrets.SIGNING_CERTIFICATE }}
+          SIGNING_CERT_PWD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
+        run: |
+          $hasCert = "$env:SIGNING_CERT" -ne ""
+          $signingEnabled = if ($hasCert) { "true" } else { "false" }
+          $certFile = if ($hasCert) { "/p:PackageCertificateKeyFile=${{ github.workspace }}\SigningCertificate.pfx /p:PackageCertificatePassword=$env:SIGNING_CERT_PWD" } else { "" }
+          $cmd = "msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=ARM64 /p:RuntimeIdentifier=win-arm64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=$signingEnabled /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\ $certFile"
+          Write-Host "Running: $cmd"
+          Invoke-Expression $cmd
+
+      - name: Export public certificate (.cer)
+        if: ${{ inputs.build_msix }}
+        env:
+          SIGNING_CERT: ${{ secrets.SIGNING_CERTIFICATE }}
+          SIGNING_CERT_PWD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
+        run: |
+          if ("$env:SIGNING_CERT" -ne "") {
+            $password = ConvertTo-SecureString -String "$env:SIGNING_CERT_PWD" -Force -AsPlainText
+            $cert = Get-PfxCertificate -FilePath "${{ github.workspace }}\SigningCertificate.pfx" -Password $password
+            Export-Certificate -Cert $cert -FilePath "TermiusCN-Tool.cer"
+            Write-Host "Public certificate exported"
+          }
+
+      - name: Clean up certificate
+        if: always()
+        run: |
+          if (Test-Path "${{ github.workspace }}\SigningCertificate.pfx") {
+            Remove-Item "${{ github.workspace }}\SigningCertificate.pfx" -Force
+          }
+
+      - name: Find and Copy MSIX files
+        if: ${{ inputs.build_msix }}
+        run: |
+          Write-Host "Searching for MSIX files..."
+          Get-ChildItem -Path "." -Filter "*.msix" -Recurse | ForEach-Object { Write-Host $_.FullName }
+          
+          $msixX64 = Get-ChildItem -Path "." -Filter "*.msix" -Recurse | Where-Object { $_.FullName -like "*x64*" -and $_.FullName -notlike "*ARM64*" } | Select-Object -First 1
+          $msixArm64 = Get-ChildItem -Path "." -Filter "*.msix" -Recurse | Where-Object { $_.FullName -like "*ARM64*" } | Select-Object -First 1
+          
+          if ($msixX64) {
+            Copy-Item $msixX64.FullName -Destination "TermiusCN-Tool-x64.msix"
+            Write-Host "Copied x64 MSIX: $($msixX64.FullName)"
+          }
+          
+          if ($msixArm64) {
+            Copy-Item $msixArm64.FullName -Destination "TermiusCN-Tool-arm64.msix"
+            Write-Host "Copied ARM64 MSIX: $($msixArm64.FullName)"
+          }
+
+      - name: List output files
+        run: |
+          Write-Host "=== Build Artifacts ==="
+          Get-ChildItem -Path "." -Filter "TermiusCN-Tool*" -File | ForEach-Object { 
+            Write-Host "$($_.Name) - $([math]::Round($_.Length / 1MB, 2)) MB"
+          }
+
+      # ========== 上传构建产物 ==========
+      - name: Upload Portable x64
+        if: ${{ inputs.build_portable }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: TermiusCN-Tool-Portable-x64
+          path: TermiusCN-Tool-Portable-x64.zip
+          retention-days: 7
+
+      - name: Upload Portable ARM64
+        if: ${{ inputs.build_portable }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: TermiusCN-Tool-Portable-arm64
+          path: TermiusCN-Tool-Portable-arm64.zip
+          retention-days: 7
+
+      - name: Upload MSIX x64
+        if: ${{ inputs.build_msix }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: TermiusCN-Tool-MSIX-x64
+          path: TermiusCN-Tool-x64.msix
+          retention-days: 7
+
+      - name: Upload MSIX ARM64
+        if: ${{ inputs.build_msix }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: TermiusCN-Tool-MSIX-arm64
+          path: TermiusCN-Tool-arm64.msix
+          retention-days: 7
+
+      - name: Upload Certificate
+        if: ${{ inputs.build_msix }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: TermiusCN-Tool-Certificate
+          path: TermiusCN-Tool.cer
+          retention-days: 7
+          if-no-files-found: ignore
+
+      - name: Upload Install Script
+        if: ${{ inputs.build_msix }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: Install-Script
+          path: Install-App.ps1
+          retention-days: 7
