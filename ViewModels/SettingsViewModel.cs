@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -112,6 +113,37 @@ public partial class SettingsViewModel : ObservableObject
         catch (Exception ex)
         {
             await DialogHelper.ShowErrorAsync("选择文件夹失败", ex.Message);
+        }
+    }
+
+    [RelayCommand]
+    private async Task ClearAllData()
+    {
+        var confirm = await DialogHelper.ShowConfirmAsync(
+            "清除所有数据",
+            "确定要清除所有应用数据吗？\n\n这将删除：\n1. 所有备份文件\n2. 用户配置文件\n3. 缓存文件\n\n此操作不可撤销！清除后应用将关闭。");
+
+        if (!confirm) return;
+
+        try
+        {
+            var appDataDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "TermiusCN-Tool");
+
+            if (System.IO.Directory.Exists(appDataDir))
+            {
+                System.IO.Directory.Delete(appDataDir, true);
+            }
+
+            await DialogHelper.ShowSuccessAsync("清除成功", "所有数据已清除，应用即将退出。");
+            
+            // 退出应用
+            Application.Current.Exit();
+        }
+        catch (Exception ex)
+        {
+            await DialogHelper.ShowErrorAsync("清除失败", $"无法清除数据: {ex.Message}\n\n请尝试手动删除文件夹:\n%AppData%\\TermiusCN-Tool");
         }
     }
 
