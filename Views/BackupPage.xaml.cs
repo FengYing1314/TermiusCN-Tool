@@ -18,10 +18,7 @@ public sealed partial class BackupPage : Page
         this.InitializeComponent();
         ViewModel = App.Services.GetRequiredService<BackupViewModel>();
         
-        // 订阅属性变更以更新UI
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
-        
-        // 页面加载时触发数据加载
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
     }
@@ -47,7 +44,6 @@ public sealed partial class BackupPage : Page
 
     private void UpdateEmptyStateVisibility()
     {
-        // 仅在不加载且没有备份时显示空状态
         EmptyStatePanel.Visibility = (!ViewModel.IsLoading && !ViewModel.HasBackups) 
             ? Visibility.Visible 
             : Visibility.Collapsed;

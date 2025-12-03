@@ -25,7 +25,6 @@ public class FileManager : IFileManager
         );
         _metadataFilePath = Path.Combine(_backupDirectory, "metadata.json");
 
-        // 确保备份目录存在
         if (!Directory.Exists(_backupDirectory))
         {
             Directory.CreateDirectory(_backupDirectory);

@@ -168,13 +168,11 @@ public partial class BackupViewModel : ObservableObject
                 "TermiusCN-Tool",
                 "Backups");
 
-            // 确保备份文件夹存在
             if (!Directory.Exists(backupDir))
             {
                 Directory.CreateDirectory(backupDir);
             }
 
-            // 使用 ProcessStartInfo 正确打开文件夹
             var startInfo = new System.Diagnostics.ProcessStartInfo
             {
                 FileName = backupDir,
