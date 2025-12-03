@@ -45,6 +45,9 @@
     <ProjectCapability Include="Msix" />
   </ItemGroup>
   <ItemGroup>
+    <None Include=".github\workflows\build.yml" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.241114003" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
@@ -69,8 +72,9 @@
   <PropertyGroup>
     <PublishReadyToRun Condition="'$(Configuration)' == 'Debug'">False</PublishReadyToRun>
     <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
-    <PackageCertificateThumbprint>857C77538027E65C07789B53AEF5108FD088BDB0</PackageCertificateThumbprint>
-    <AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
     <DefaultLanguage>zh-cn</DefaultLanguage>
+    <!-- 本地开发时使用证书指纹，CI 环境通过命令行参数覆盖 -->
+    <PackageCertificateThumbprint Condition="'$(PackageCertificateKeyFile)' == ''">857C77538027E65C07789B53AEF5108FD088BDB0</PackageCertificateThumbprint>
+    <AppxPackageSigningEnabled Condition="'$(AppxPackageSigningEnabled)' == ''">True</AppxPackageSigningEnabled>
   </PropertyGroup>
 </Project>

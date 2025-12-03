@@ -75,8 +75,12 @@ jobs:
         run: |
           $hasCert = "$env:SIGNING_CERT" -ne ""
           $signingEnabled = if ($hasCert) { "true" } else { "false" }
-          $certFile = if ($hasCert) { "/p:PackageCertificateKeyFile=${{ github.workspace }}\SigningCertificate.pfx /p:PackageCertificatePassword=$env:SIGNING_CERT_PWD" } else { "" }
-          $cmd = "msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=x64 /p:RuntimeIdentifier=win-x64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=$signingEnabled /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\ $certFile"
+          $certParams = if ($hasCert) { 
+            "/p:PackageCertificateKeyFile=${{ github.workspace }}\SigningCertificate.pfx /p:PackageCertificatePassword=$env:SIGNING_CERT_PWD /p:PackageCertificateThumbprint="
+          } else { 
+            "/p:PackageCertificateThumbprint=" 
+          }
+          $cmd = "msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=x64 /p:RuntimeIdentifier=win-x64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=$signingEnabled /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\ $certParams"
           Write-Host "Running: $cmd"
           Invoke-Expression $cmd
 
@@ -87,8 +91,12 @@ jobs:
         run: |
           $hasCert = "$env:SIGNING_CERT" -ne ""
           $signingEnabled = if ($hasCert) { "true" } else { "false" }
-          $certFile = if ($hasCert) { "/p:PackageCertificateKeyFile=${{ github.workspace }}\SigningCertificate.pfx /p:PackageCertificatePassword=$env:SIGNING_CERT_PWD" } else { "" }
-          $cmd = "msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=ARM64 /p:RuntimeIdentifier=win-arm64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=$signingEnabled /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\ $certFile"
+          $certParams = if ($hasCert) { 
+            "/p:PackageCertificateKeyFile=${{ github.workspace }}\SigningCertificate.pfx /p:PackageCertificatePassword=$env:SIGNING_CERT_PWD /p:PackageCertificateThumbprint="
+          } else { 
+            "/p:PackageCertificateThumbprint=" 
+          }
+          $cmd = "msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=ARM64 /p:RuntimeIdentifier=win-arm64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=$signingEnabled /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\ $certParams"
           Write-Host "Running: $cmd"
           Invoke-Expression $cmd
 
