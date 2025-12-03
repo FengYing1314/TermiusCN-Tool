@@ -68,6 +68,3 @@ dotnet publish -c Release -r win-x64 -p:Platform=x64 -p:WindowsPackageType=None 
 
 本工具仅供学习交流，汉化资源来自社区。请支持正版软件。
 作者不对使用本工具造成的任何数据丢失负责。
-
-
-[def]: 

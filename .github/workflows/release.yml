@@ -21,6 +21,9 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
       - name: Get version from tag
         id: version
         run: |
@@ -38,7 +41,7 @@ jobs:
       - name: Update Package.appxmanifest version
         run: |
           $manifest = Get-Content "Package.appxmanifest" -Raw
-          $manifest = $manifest -replace 'Version="[\d\.]+"', 'Version="${{ steps.version.outputs.VERSION }}"'
+          $manifest = $manifest -creplace 'Version="[\d\.]+"', 'Version="${{ steps.version.outputs.VERSION }}"'
           Set-Content "Package.appxmanifest" $manifest
           Write-Host "Updated manifest version to ${{ steps.version.outputs.VERSION }}"
 
@@ -58,11 +61,11 @@ jobs:
       # ========== MSIX 安装包 ==========
       - name: Build MSIX x64
         run: |
-          dotnet build TermiusCN-Tool.csproj -c Release -r win-x64 -p:Platform=x64 -p:GenerateAppxPackageOnBuild=true -p:AppxPackageSigningEnabled=false -p:AppxBundle=Never -p:UapAppxPackageBuildMode=SideloadOnly -p:AppxPackageDir=AppPackages\
+          msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=x64 /p:RuntimeIdentifier=win-x64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=false /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\
 
       - name: Build MSIX ARM64
         run: |
-          dotnet build TermiusCN-Tool.csproj -c Release -r win-arm64 -p:Platform=ARM64 -p:GenerateAppxPackageOnBuild=true -p:AppxPackageSigningEnabled=false -p:AppxBundle=Never -p:UapAppxPackageBuildMode=SideloadOnly -p:AppxPackageDir=AppPackages\
+          msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=ARM64 /p:RuntimeIdentifier=win-arm64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=false /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\
 
       - name: Find and Copy MSIX files
         run: |
