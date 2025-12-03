@@ -121,6 +121,32 @@
                        HorizontalAlignment="Stretch"/>
             </StackPanel>
 
+            <!-- 危险区域 -->
+            <Border Background="{ThemeResource SystemFillColorCriticalBackgroundBrush}"
+                    BorderBrush="{ThemeResource SystemFillColorCriticalBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16">
+                <StackPanel Spacing="12">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <FontIcon Glyph="&#xE7BA;" Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
+                        <TextBlock Text="危险区域" 
+                                  Style="{StaticResource SubtitleTextBlockStyle}"
+                                  Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
+                    </StackPanel>
+                    
+                    <TextBlock Text="清除所有应用数据，包括备份文件、配置文件和缓存。此操作不可撤销。"
+                              TextWrapping="Wrap"
+                              FontSize="12"/>
+                              
+                    <Button Content="清除所有数据并退出"
+                           Background="{ThemeResource SystemFillColorCriticalBrush}"
+                           Foreground="White"
+                           Command="{x:Bind ViewModel.ClearAllDataCommand}"
+                           HorizontalAlignment="Stretch"/>
+                </StackPanel>
+            </Border>
+
             <!-- 关于信息 -->
             <StackPanel Spacing="8" Padding="16" Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                        CornerRadius="8">

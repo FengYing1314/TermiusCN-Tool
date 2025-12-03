@@ -21,24 +21,101 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Build x64
-        run: dotnet publish TermiusCN-Tool.csproj -c Release -r win-x64 -p:Platform=x64 --self-contained true -o publish/win-x64
+      - name: Get version from tag
+        id: version
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = $tag -replace '^v', ''
+          # 确保版本号格式正确 (x.x.x.x)
+          $parts = $version.Split('.')
+          while ($parts.Count -lt 4) {
+            $parts += "0"
+          }
+          $fullVersion = $parts[0..3] -join '.'
+          echo "VERSION=$fullVersion" >> $env:GITHUB_OUTPUT
+          echo "Version: $fullVersion"
 
-      - name: Build ARM64
-        run: dotnet publish TermiusCN-Tool.csproj -c Release -r win-arm64 -p:Platform=ARM64 --self-contained true -o publish/win-arm64
+      - name: Update Package.appxmanifest version
+        run: |
+          $manifest = Get-Content "Package.appxmanifest" -Raw
+          $manifest = $manifest -replace 'Version="[\d\.]+"', 'Version="${{ steps.version.outputs.VERSION }}"'
+          Set-Content "Package.appxmanifest" $manifest
+          Write-Host "Updated manifest version to ${{ steps.version.outputs.VERSION }}"
 
-      - name: Create x64 Archive
-        run: Compress-Archive -Path publish/win-x64/* -DestinationPath TermiusCN-Tool-${{ github.ref_name }}-x64.zip
+      # ========== 便携版 (Portable) ==========
+      - name: Build Portable x64
+        run: dotnet publish TermiusCN-Tool.csproj -c Release -r win-x64 -p:Platform=x64 -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true --self-contained true -o publish/portable-x64
 
-      - name: Create ARM64 Archive
-        run: Compress-Archive -Path publish/win-arm64/* -DestinationPath TermiusCN-Tool-${{ github.ref_name }}-arm64.zip
+      - name: Build Portable ARM64
+        run: dotnet publish TermiusCN-Tool.csproj -c Release -r win-arm64 -p:Platform=ARM64 -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=true --self-contained true -o publish/portable-arm64
+
+      - name: Create Portable x64 Archive
+        run: Compress-Archive -Path publish/portable-x64/* -DestinationPath TermiusCN-Tool-${{ github.ref_name }}-Portable-x64.zip
+
+      - name: Create Portable ARM64 Archive
+        run: Compress-Archive -Path publish/portable-arm64/* -DestinationPath TermiusCN-Tool-${{ github.ref_name }}-Portable-arm64.zip
+
+      # ========== MSIX 安装包 ==========
+      - name: Build MSIX x64
+        run: |
+          dotnet build TermiusCN-Tool.csproj -c Release -r win-x64 -p:Platform=x64 -p:GenerateAppxPackageOnBuild=true -p:AppxPackageSigningEnabled=false -p:AppxBundle=Never -p:UapAppxPackageBuildMode=SideloadOnly -p:AppxPackageDir=AppPackages\
+
+      - name: Build MSIX ARM64
+        run: |
+          dotnet build TermiusCN-Tool.csproj -c Release -r win-arm64 -p:Platform=ARM64 -p:GenerateAppxPackageOnBuild=true -p:AppxPackageSigningEnabled=false -p:AppxBundle=Never -p:UapAppxPackageBuildMode=SideloadOnly -p:AppxPackageDir=AppPackages\
+
+      - name: Find and Copy MSIX files
+        run: |
+          Write-Host "Searching for MSIX files..."
+          Get-ChildItem -Path "." -Filter "*.msix" -Recurse | ForEach-Object { Write-Host $_.FullName }
+          
+          $msixX64 = Get-ChildItem -Path "." -Filter "*.msix" -Recurse | Where-Object { $_.FullName -like "*x64*" -and $_.FullName -notlike "*ARM64*" } | Select-Object -First 1
+          $msixArm64 = Get-ChildItem -Path "." -Filter "*.msix" -Recurse | Where-Object { $_.FullName -like "*ARM64*" } | Select-Object -First 1
+          
+          if ($msixX64) {
+            Copy-Item $msixX64.FullName -Destination "TermiusCN-Tool-${{ github.ref_name }}-x64.msix"
+            Write-Host "Copied x64 MSIX: $($msixX64.FullName)"
+          } else {
+            Write-Host "::warning::x64 MSIX not found"
+          }
+          
+          if ($msixArm64) {
+            Copy-Item $msixArm64.FullName -Destination "TermiusCN-Tool-${{ github.ref_name }}-arm64.msix"
+            Write-Host "Copied ARM64 MSIX: $($msixArm64.FullName)"
+          } else {
+            Write-Host "::warning::ARM64 MSIX not found"
+          }
+
+      - name: List output files
+        run: |
+          Write-Host "=== Release files ==="
+          Get-ChildItem -Path "." -Filter "TermiusCN-Tool-*" | ForEach-Object { 
+            Write-Host "$($_.Name) - $([math]::Round($_.Length / 1MB, 2)) MB"
+          }
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            TermiusCN-Tool-${{ github.ref_name }}-x64.zip
-            TermiusCN-Tool-${{ github.ref_name }}-arm64.zip
+            TermiusCN-Tool-${{ github.ref_name }}-Portable-x64.zip
+            TermiusCN-Tool-${{ github.ref_name }}-Portable-arm64.zip
+            TermiusCN-Tool-${{ github.ref_name }}-x64.msix
+            TermiusCN-Tool-${{ github.ref_name }}-arm64.msix
           generate_release_notes: true
+          fail_on_unmatched_files: false
+          body: |
+            ## 下载说明
+            
+            ### 📦 MSIX 安装包
+            - `TermiusCN-Tool-${{ github.ref_name }}-x64.msix` - 64位 Windows 安装包
+            - `TermiusCN-Tool-${{ github.ref_name }}-arm64.msix` - ARM64 Windows 安装包
+            
+            > ⚠️ 首次安装 MSIX 需要在「设置 → 隐私和安全性 → 开发者选项」中启用「开发人员模式」或「旁加载应用」
+            
+            ### 📂 便携版 (解压即用)
+            - `TermiusCN-Tool-${{ github.ref_name }}-Portable-x64.zip` - 64位 Windows 便携版
+            - `TermiusCN-Tool-${{ github.ref_name }}-Portable-arm64.zip` - ARM64 Windows 便携版
+            
+            > 解压后运行 `TermiusCN-Tool.exe` 即可使用，无需安装
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
