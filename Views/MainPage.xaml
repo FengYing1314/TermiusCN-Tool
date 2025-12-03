@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="TermiusCN_Tool.Views.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <ScrollViewer>
+        <StackPanel Padding="24" Spacing="20" MaxWidth="900" HorizontalAlignment="Center">
+
+            <!-- 状态信息栏 -->
+            <InfoBar
+                Title="Termius 状态"
+                IsOpen="True"
+                IsClosable="False"
+                Severity="{x:Bind ViewModel.StatusSeverity, Mode=OneWay}"
+                Message="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"/>
+
+            <!-- 操作按钮栏 -->
+            <CommandBar DefaultLabelPosition="Right" Background="Transparent" IsOpen="False">
+                <AppBarButton Icon="Refresh" Label="刷新状态"
+                             Command="{x:Bind ViewModel.RefreshCommand}"/>
+                <AppBarButton Icon="Repair" Label="调试信息"
+                             Command="{x:Bind ViewModel.ShowDebugInfoCommand}"/>
+            </CommandBar>
+
+            <!-- 版本信息卡片 -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="20">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="版本信息" 
+                              Style="{StaticResource SubtitleTextBlockStyle}"
+                              FontWeight="SemiBold"/>
+                    
+                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto"
+                          ColumnSpacing="16" RowSpacing="16">
+                        <TextBlock Text="当前版本:" 
+                                  Grid.Row="0" Grid.Column="0"
+                                  VerticalAlignment="Center"
+                                  FontSize="14"/>
+                        <TextBlock Text="{x:Bind ViewModel.CurrentVersion, Mode=OneWay}"
+                                  Grid.Row="0" Grid.Column="1"
+                                  FontWeight="SemiBold"
+                                  FontSize="16"
+                                  Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+
+                        <TextBlock Text="可用版本:" 
+                                  Grid.Row="1" Grid.Column="0"
+                                  VerticalAlignment="Center"
+                                  FontSize="14"/>
+                        <TextBlock Text="{x:Bind ViewModel.AvailableVersion, Mode=OneWay}"
+                                  Grid.Row="1" Grid.Column="1"
+                                  FontWeight="SemiBold"
+                                  FontSize="16"
+                                  Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- 汉化类型选择 -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="20">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="选择汉化类型" 
+                              Style="{StaticResource SubtitleTextBlockStyle}"
+                              FontWeight="SemiBold"/>
+
+                <RadioButtons SelectedIndex="{x:Bind ViewModel.SelectedTypeIndex, Mode=TwoWay}">
+                    <RadioButton>
+                        <StackPanel>
+                            <TextBlock Text="标准版 (仅汉化)" FontWeight="SemiBold"/>
+                            <TextBlock Text="适合有会员资格的用户，保留所有原始功能"
+                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                     FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </RadioButton>
+
+                    <RadioButton>
+                        <StackPanel>
+                            <TextBlock Text="试用版 (推荐)" FontWeight="SemiBold"/>
+                            <TextBlock Text="汉化界面并隐藏 'Upgrade now' 等碍眼按钮"
+                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                     FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </RadioButton>
+
+                    <RadioButton>
+                        <StackPanel>
+                            <TextBlock Text="离线版 (跳过登录)" FontWeight="SemiBold"/>
+                            <TextBlock Text="支持完全离线使用，跳过登录验证"
+                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                     FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </RadioButton>
+                </RadioButtons>
+                </StackPanel>
+            </Border>
+
+            <!-- 操作按钮 -->
+            <Button Content="一键汉化"
+                    Style="{StaticResource AccentButtonStyle}"
+                    Command="{x:Bind ViewModel.LocalizeCommand}"
+                    IsEnabled="{x:Bind ViewModel.CanLocalize, Mode=OneWay}"
+                    HorizontalAlignment="Stretch"
+                    Height="48"
+                    FontSize="16"/>
+
+            <!-- 进度指示器 -->
+            <StackPanel Spacing="8" Visibility="{x:Bind ViewModel.IsWorking, Mode=OneWay}">
+                <ProgressBar IsIndeterminate="True"/>
+                <TextBlock Text="{x:Bind ViewModel.ProgressMessage, Mode=OneWay}"
+                          HorizontalAlignment="Center"
+                          Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
+
+            <!-- 拖放区域 -->
+            <Border BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="2"
+                    CornerRadius="8"
+                    Padding="32"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    AllowDrop="True"
+                    DragOver="Border_DragOver"
+                    Drop="Border_Drop">
+                <StackPanel Spacing="12" HorizontalAlignment="Center">
+                    <FontIcon Glyph="&#xE8B7;" FontSize="48"
+                             Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
+                    <TextBlock Text="或拖放 app.asar 文件到此处"
+                              HorizontalAlignment="Center"
+                              FontWeight="SemiBold"/>
+                    <TextBlock Text="支持手动替换其他平台的汉化文件"
+                              FontSize="12"
+                              Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                              HorizontalAlignment="Center"/>
+                </StackPanel>
+            </Border>
+
+            <!-- 智能检测提示 -->
+            <Expander Header="💡 智能检测功能" IsExpanded="True">
+                <StackPanel Spacing="12" Padding="16" Background="{ThemeResource LayerFillColorDefaultBrush}">
+                    <TextBlock TextWrapping="Wrap" FontWeight="SemiBold">
+                        🔍 未检测到 Termius？试试这个方法：
+                    </TextBlock>
+                    <TextBlock TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                        1️⃣ 启动 Termius 应用程序
+                    </TextBlock>
+                    <TextBlock TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                        2️⃣ 点击上方状态栏中的「刷新状态」按钮
+                    </TextBlock>
+                    <TextBlock TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                        3️⃣ 工具会自动从运行中的进程获取 Termius 安装路径
+                    </TextBlock>
+                    <Border Background="{ThemeResource AccentFillColorDefaultBrush}" 
+                            CornerRadius="4" 
+                            Padding="8"
+                            Margin="0,8,0,0">
+                        <TextBlock TextWrapping="Wrap" 
+                                  Foreground="White"
+                                  FontSize="12">
+                            <Run Text="✨ 智能检测策略："/>
+                            <LineBreak/>
+                            <Run Text="① 自定义路径 → ② 默认路径 → ③ 进程检测"/>
+                        </TextBlock>
+                    </Border>
+                </StackPanel>
+            </Expander>
+
+            <!-- 注意事项 -->
+            <Expander Header="⚠️ 使用须知" IsExpanded="False">
+                <StackPanel Spacing="12" Padding="16">
+                    <TextBlock TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                        • 该汉化包仅适用于本地学习和测试，不保证所有设备可用
+                    </TextBlock>
+                    <TextBlock TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                        • 使用汉化包可能影响 Termius 的正常使用和自动更新功能
+                    </TextBlock>
+                    <TextBlock TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                        • 操作前会自动备份原文件，可随时在「备份管理」页面还原
+                    </TextBlock>
+                    <TextBlock TextWrapping="Wrap" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                        • 替换文件后需重启 Termius 才能生效
+                    </TextBlock>
+                </StackPanel>
+            </Expander>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>

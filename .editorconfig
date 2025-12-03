@@ -1,0 +1,78 @@
+# EditorConfig is awesome: https://editorconfig.org
+
+# 顶级配置，不再往上级目录查找
+root = true
+
+# 默认规则 - 适用于所有文件
+[*]
+charset = utf-8
+end_of_line = crlf
+indent_style = space
+indent_size = 4
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# C# 源文件
+[*.cs]
+charset = utf-8
+indent_size = 4
+
+# XAML 文件
+[*.xaml]
+charset = utf-8
+indent_size = 4
+
+# XML 文件
+[*.{xml,csproj,props,targets,config}]
+charset = utf-8
+indent_size = 2
+
+# JSON 文件
+[*.json]
+charset = utf-8
+indent_size = 2
+
+# Markdown 文件
+[*.md]
+charset = utf-8
+trim_trailing_whitespace = false
+
+# PowerShell 脚本
+[*.ps1]
+charset = utf-8
+indent_size = 4
+
+# YAML 文件
+[*.{yml,yaml}]
+charset = utf-8
+indent_size = 2
+
+# 解决方案文件 (必须使用 tabs)
+[*.sln]
+indent_style = tab
+
+# C# 代码风格设置
+[*.cs]
+# 使用 this. 限定符
+dotnet_style_qualification_for_field = false:suggestion
+dotnet_style_qualification_for_property = false:suggestion
+dotnet_style_qualification_for_method = false:suggestion
+dotnet_style_qualification_for_event = false:suggestion
+
+# 使用语言关键字而非框架类型名称
+dotnet_style_predefined_type_for_locals_parameters_members = true:suggestion
+dotnet_style_predefined_type_for_member_access = true:suggestion
+
+# 使用 var
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = true:suggestion
+
+# 大括号偏好
+csharp_prefer_braces = true:suggestion
+
+# 新行偏好
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true

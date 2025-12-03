@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "TermiusCN-Tool (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "TermiusCN-Tool (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

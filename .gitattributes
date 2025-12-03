@@ -1,0 +1,34 @@
+# 设置默认行为，确保所有文本文件使用 LF 作为行结束符
+* text=auto eol=crlf
+
+# 明确指定文本文件类型
+*.cs text eol=crlf
+*.xaml text eol=crlf
+*.csproj text eol=crlf
+*.slnx text eol=crlf
+*.sln text eol=crlf
+*.json text eol=crlf
+*.xml text eol=crlf
+*.md text eol=crlf
+*.ps1 text eol=crlf
+*.manifest text eol=crlf
+*.props text eol=crlf
+*.targets text eol=crlf
+*.config text eol=crlf
+*.yaml text eol=crlf
+*.yml text eol=crlf
+
+# 二进制文件
+*.png binary
+*.ico binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.bmp binary
+*.exe binary
+*.dll binary
+*.pdb binary
+*.cache binary
+
+# 发布配置
+*.pubxml text eol=crlf
