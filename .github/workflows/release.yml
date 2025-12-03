@@ -60,32 +60,45 @@ jobs:
 
       # ========== MSIX 安装包 ==========
       - name: Decode signing certificate
-        if: ${{ secrets.SIGNING_CERTIFICATE != '' }}
+        if: ${{ env.HAS_SIGNING_CERT == 'true' }}
+        env:
+          HAS_SIGNING_CERT: ${{ secrets.SIGNING_CERTIFICATE != '' }}
         run: |
           $certBytes = [Convert]::FromBase64String("${{ secrets.SIGNING_CERTIFICATE }}")
           [IO.File]::WriteAllBytes("${{ github.workspace }}\SigningCertificate.pfx", $certBytes)
           Write-Host "Certificate decoded successfully"
 
       - name: Build MSIX x64
+        env:
+          SIGNING_CERT: ${{ secrets.SIGNING_CERTIFICATE }}
+          SIGNING_CERT_PWD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
         run: |
-          $signingEnabled = if ("${{ secrets.SIGNING_CERTIFICATE }}" -ne "") { "true" } else { "false" }
-          $certFile = if ($signingEnabled -eq "true") { "/p:PackageCertificateKeyFile=${{ github.workspace }}\SigningCertificate.pfx /p:PackageCertificatePassword=${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}" } else { "" }
+          $hasCert = "$env:SIGNING_CERT" -ne ""
+          $signingEnabled = if ($hasCert) { "true" } else { "false" }
+          $certFile = if ($hasCert) { "/p:PackageCertificateKeyFile=${{ github.workspace }}\SigningCertificate.pfx /p:PackageCertificatePassword=$env:SIGNING_CERT_PWD" } else { "" }
           $cmd = "msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=x64 /p:RuntimeIdentifier=win-x64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=$signingEnabled /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\ $certFile"
           Write-Host "Running: $cmd"
           Invoke-Expression $cmd
 
       - name: Build MSIX ARM64
+        env:
+          SIGNING_CERT: ${{ secrets.SIGNING_CERTIFICATE }}
+          SIGNING_CERT_PWD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
         run: |
-          $signingEnabled = if ("${{ secrets.SIGNING_CERTIFICATE }}" -ne "") { "true" } else { "false" }
-          $certFile = if ($signingEnabled -eq "true") { "/p:PackageCertificateKeyFile=${{ github.workspace }}\SigningCertificate.pfx /p:PackageCertificatePassword=${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}" } else { "" }
+          $hasCert = "$env:SIGNING_CERT" -ne ""
+          $signingEnabled = if ($hasCert) { "true" } else { "false" }
+          $certFile = if ($hasCert) { "/p:PackageCertificateKeyFile=${{ github.workspace }}\SigningCertificate.pfx /p:PackageCertificatePassword=$env:SIGNING_CERT_PWD" } else { "" }
           $cmd = "msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=ARM64 /p:RuntimeIdentifier=win-arm64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=$signingEnabled /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\ $certFile"
           Write-Host "Running: $cmd"
           Invoke-Expression $cmd
 
       - name: Export public certificate (.cer)
-        if: ${{ secrets.SIGNING_CERTIFICATE != '' }}
+        if: ${{ env.HAS_SIGNING_CERT == 'true' }}
+        env:
+          HAS_SIGNING_CERT: ${{ secrets.SIGNING_CERTIFICATE != '' }}
+          SIGNING_CERT_PWD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
         run: |
-          $password = ConvertTo-SecureString -String "${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}" -Force -AsPlainText
+          $password = ConvertTo-SecureString -String "$env:SIGNING_CERT_PWD" -Force -AsPlainText
           $cert = Get-PfxCertificate -FilePath "${{ github.workspace }}\SigningCertificate.pfx" -Password $password
           Export-Certificate -Cert $cert -FilePath "TermiusCN-Tool.cer"
           Write-Host "Public certificate exported"
