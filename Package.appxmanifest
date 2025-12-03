@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+Ôªø<?xml version="1.0" encoding="utf-8"?>
 
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
@@ -9,14 +9,14 @@
 
   <Identity
     Name="FengYing.TermiusCN-Tool"
-    Publisher="CN=∑„”®"
+    Publisher="CN=fying"
     Version="1.1.1.0" />
 
   <mp:PhoneIdentity PhoneProductId="c8038bac-bcbc-439d-87f7-a5ba90844acd" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
     <DisplayName>TermiusCN-Tool</DisplayName>
-    <PublisherDisplayName>∑„”®</PublisherDisplayName>
+    <PublisherDisplayName>fying</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 
