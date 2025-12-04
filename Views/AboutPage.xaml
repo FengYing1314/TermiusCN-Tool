@@ -38,7 +38,7 @@
                     <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto" 
                           ColumnSpacing="16" RowSpacing="12">
                         <TextBlock Text="版本:" Grid.Row="0" Grid.Column="0" VerticalAlignment="Center"/>
-                        <TextBlock Text="v1.1.0" Grid.Row="0" Grid.Column="1" FontWeight="SemiBold"/>
+                        <TextBlock Text="v1.2.0" Grid.Row="0" Grid.Column="1" FontWeight="SemiBold"/>
 
                         <TextBlock Text="框架:" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center"/>
                         <TextBlock Text=".NET 8 + WinUI 3" Grid.Row="1" Grid.Column="1" FontWeight="SemiBold"/>

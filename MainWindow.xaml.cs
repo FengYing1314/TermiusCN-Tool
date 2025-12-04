@@ -15,6 +15,9 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
 
+        ExtendsContentIntoTitleBar = true;
+        SetTitleBar(AppTitleBarDragRegion);
+
         // 监听 Frame 加载事件以初始化 DialogHelper
         ContentFrame.Loaded += (s, e) =>
         {
