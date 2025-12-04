@@ -64,7 +64,7 @@ jobs:
       
       # 1. 准备证书：解码并导入到当前用户存储区
       - name: Setup Signing Certificate
-        if: env.HAS_CERT == ' true'
+        if: env.HAS_CERT == 'true'
         env:
           SIGNING_CERT_BASE64: ${{ secrets.SIGNING_CERTIFICATE }}
           SIGNING_PWD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
@@ -145,6 +145,8 @@ jobs:
             $cert = Get-PfxCertificate -FilePath "${{ github.workspace }}\SigningCertificate.pfx" -Password $password
             Export-Certificate -Cert $cert -FilePath "TermiusCN-Tool.cer"
             Write-Host "Public certificate exported."
+          } else {
+            Write-Warning "SigningCertificate.pfx not found. Cannot export public certificate."
           }
 
       - name: Clean up certificate
