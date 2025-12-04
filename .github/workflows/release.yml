@@ -170,10 +170,46 @@ jobs:
             Write-Host "Copied ARM64 MSIX: $($msixArm64.FullName)"
           } else { Write-Host "::warning::ARM64 MSIX not found" }
 
+      - name: Create MSIX Installation Package (x64)
+        run: |
+          $packageDir = "msix-install-package-x64"
+          New-Item -ItemType Directory -Force -Path $packageDir
+
+          if (Test-Path "TermiusCN-Tool-${{ github.ref_name }}-x64.msix") {
+            Copy-Item "TermiusCN-Tool-${{ github.ref_name }}-x64.msix" -Destination $packageDir
+          }
+          if (Test-Path "TermiusCN-Tool.cer") {
+            Copy-Item "TermiusCN-Tool.cer" -Destination $packageDir
+          }
+          if (Test-Path "Install-App.ps1") {
+            Copy-Item "Install-App.ps1" -Destination $packageDir
+          }
+
+          Compress-Archive -Path "$packageDir\*" -DestinationPath "TermiusCN-Tool-${{ github.ref_name }}-MSIX-x64-Installer.zip"
+          Write-Host "Created MSIX installation package (x64)"
+
+      - name: Create MSIX Installation Package (ARM64)
+        run: |
+          $packageDir = "msix-install-package-arm64"
+          New-Item -ItemType Directory -Force -Path $packageDir
+
+          if (Test-Path "TermiusCN-Tool-${{ github.ref_name }}-arm64.msix") {
+            Copy-Item "TermiusCN-Tool-${{ github.ref_name }}-arm64.msix" -Destination $packageDir
+          }
+          if (Test-Path "TermiusCN-Tool.cer") {
+            Copy-Item "TermiusCN-Tool.cer" -Destination $packageDir
+          }
+          if (Test-Path "Install-App.ps1") {
+            Copy-Item "Install-App.ps1" -Destination $packageDir
+          }
+
+          Compress-Archive -Path "$packageDir\*" -DestinationPath "TermiusCN-Tool-${{ github.ref_name }}-MSIX-ARM64-Installer.zip"
+          Write-Host "Created MSIX installation package (ARM64)"
+
       - name: List output files
         run: |
           Write-Host "=== Release files ==="
-          Get-ChildItem -Path "." -Filter "TermiusCN-Tool-*" | ForEach-Object { 
+          Get-ChildItem -Path "." -Filter "TermiusCN-Tool-*" | ForEach-Object {
             Write-Host "$($_.Name) - $([math]::Round($_.Length / 1MB, 2)) MB"
           }
 
@@ -185,28 +221,37 @@ jobs:
             TermiusCN-Tool-${{ github.ref_name }}-Portable-arm64.zip
             TermiusCN-Tool-${{ github.ref_name }}-x64.msix
             TermiusCN-Tool-${{ github.ref_name }}-arm64.msix
+            TermiusCN-Tool-${{ github.ref_name }}-MSIX-x64-Installer.zip
+            TermiusCN-Tool-${{ github.ref_name }}-MSIX-ARM64-Installer.zip
             TermiusCN-Tool.cer
             Install-App.ps1
           generate_release_notes: true
           fail_on_unmatched_files: false
           body: |
             ## 下载说明
-            
+
             ### 📦 MSIX 安装包（推荐）
             - `TermiusCN-Tool-${{ github.ref_name }}-x64.msix` - 64位 Windows 安装包
             - `TermiusCN-Tool-${{ github.ref_name }}-arm64.msix` - ARM64 Windows 安装包
-            
+            - `TermiusCN-Tool-${{ github.ref_name }}-MSIX-x64-Installer.zip` - 64位一键安装包（包含 MSIX + 证书 + 安装脚本）⭐
+            - `TermiusCN-Tool-${{ github.ref_name }}-MSIX-ARM64-Installer.zip` - ARM64一键安装包（包含 MSIX + 证书 + 安装脚本）⭐
+
             #### 安装方法
-            **方法一：使用安装脚本（推荐）**
+            **方法一：使用一键安装包（最简单）**
+            1. 下载 `TermiusCN-Tool-${{ github.ref_name }}-MSIX-x64-Installer.zip`
+            2. 解压缩到任意目录
+            3. 右键 `Install-App.ps1` → 使用 PowerShell 运行（会自动提权并安装证书）
+
+            **方法二：分别下载文件**
             1. 下载 `TermiusCN-Tool-${{ github.ref_name }}-x64.msix`、`TermiusCN-Tool.cer` 和 `Install-App.ps1`
             2. 将三个文件放在同一目录
             3. 右键 `Install-App.ps1` → 使用 PowerShell 运行（会自动提权并安装证书）
-            
-            **方法二：手动安装**
+
+            **方法三：手动安装**
             1. 双击 `TermiusCN-Tool.cer` → 安装证书 → 本地计算机 → **受信任的根证书颁发机构**
             2. 双击 `.msix` 文件安装
-            
-            **方法三：开发者模式**
+
+            **方法四：开发者模式**
             1. 打开「设置 → 系统 → 开发者选项」→ 启用「开发人员模式」
             2. 双击 `.msix` 文件安装
             
