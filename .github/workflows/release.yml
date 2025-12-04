@@ -62,7 +62,7 @@ jobs:
       
       # 1. 准备证书：解码并导入到当前用户存储区
       - name: Setup Signing Certificate
-        if: secrets.SIGNING_CERTIFICATE != ''
+        if: ${{ secrets.SIGNING_CERTIFICATE != '' }}
         env:
           SIGNING_CERT_BASE64: ${{ secrets.SIGNING_CERTIFICATE }}
           SIGNING_PWD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
@@ -135,7 +135,7 @@ jobs:
 
       # 4. 导出公钥证书
       - name: Export public certificate (.cer)
-        if: secrets.SIGNING_CERTIFICATE != ''
+        if: ${{ secrets.SIGNING_CERTIFICATE != '' }}
         env:
           SIGNING_PWD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
         run: |
