@@ -11,6 +11,8 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      HAS_CERT: ${{ secrets.SIGNING_CERTIFICATE != '' }}
 
     steps:
       - name: Checkout
@@ -62,7 +64,7 @@ jobs:
       
       # 1. 准备证书：解码并导入到当前用户存储区
       - name: Setup Signing Certificate
-        if: secrets.SIGNING_CERTIFICATE != ''
+        if: env.HAS_CERT == ' true'
         env:
           SIGNING_CERT_BASE64: ${{ secrets.SIGNING_CERTIFICATE }}
           SIGNING_PWD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
@@ -131,9 +133,10 @@ jobs:
             msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=ARM64 /p:RuntimeIdentifier=win-arm64 `
               /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=false `
               /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\
-             if: ${{ secrets.SIGNING_CERTIFICATE != '' }}{ }}
+          }
+
       - name: Export public certificate (.cer)
-        if: secrets.SIGNING_CERTIFICATE != ''
+        if: env.HAS_CERT == 'true'
         env:
           SIGNING_PWD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
         run: |
