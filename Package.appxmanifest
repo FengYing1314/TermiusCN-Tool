@@ -9,7 +9,7 @@
 
   <Identity
     Name="FengYing.TermiusCN-Tool"
-    Publisher="CN=fying"
+    Publisher="CN=TermiusCN-Tool"
     Version="1.1.1.0" />
 
   <mp:PhoneIdentity PhoneProductId="c8038bac-bcbc-439d-87f7-a5ba90844acd" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>

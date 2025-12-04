@@ -85,6 +85,7 @@
         或者在没有证书时构建未签名的包，而不会产生指纹冲突。
     -->
     <AppxPackageSigningEnabled Condition="'$(AppxPackageSigningEnabled)' == ''">True</AppxPackageSigningEnabled>
+    <PackageCertificateThumbprint Condition="'$(CI)'!='true'">1E85FA01057D02B0F57368CD621AACDE332BF174</PackageCertificateThumbprint>
   </PropertyGroup>
 
 </Project>
