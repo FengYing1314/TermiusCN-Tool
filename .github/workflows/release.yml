@@ -11,7 +11,7 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,6 +24,7 @@ jobs:
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
+      # 提取版本号
       - name: Get version from tag
         id: version
         run: |
@@ -59,57 +60,93 @@ jobs:
         run: Compress-Archive -Path publish/portable-arm64/* -DestinationPath TermiusCN-Tool-${{ github.ref_name }}-Portable-arm64.zip
 
       # ========== MSIX 安装包 ==========
-      - name: Decode signing certificate
-        if: ${{ env.HAS_SIGNING_CERT == 'true' }}
+      
+      # 1. 准备证书：解码并导入到当前用户存储区 (User Store)
+      # 这能解决 MSBuild 无法直接读取带密码 PFX 文件的问题 (APPX0105)
+      - name: Setup Signing Certificate
+        if: ${{ secrets.SIGNING_CERTIFICATE != '' }}
         env:
-          HAS_SIGNING_CERT: ${{ secrets.SIGNING_CERTIFICATE != '' }}
+          SIGNING_CERT_BASE64: ${{ secrets.SIGNING_CERTIFICATE }}
+          SIGNING_PWD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
+        shell: pwsh
         run: |
-          $certBytes = [Convert]::FromBase64String("${{ secrets.SIGNING_CERTIFICATE }}")
-          [IO.File]::WriteAllBytes("${{ github.workspace }}\SigningCertificate.pfx", $certBytes)
-          Write-Host "Certificate decoded successfully"
+          $pfxPath = "${{ github.workspace }}\SigningCertificate.pfx"
+          
+          # 解码
+          try {
+            $certBytes = [Convert]::FromBase64String("$env:SIGNING_CERT_BASE64")
+            [IO.File]::WriteAllBytes($pfxPath, $certBytes)
+          } catch {
+            Write-Error "Certificate decoding failed."
+            exit 1
+          }
 
+          # 导入到存储区
+          Write-Host "Importing certificate to CurrentUser\My..."
+          $password = ConvertTo-SecureString -String "$env:SIGNING_PWD" -Force -AsPlainText
+          try {
+            $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation Cert:\CurrentUser\My -Password $password
+            $thumbprint = $cert.Thumbprint
+            Write-Host "Success! Thumbprint: $thumbprint"
+            
+            # 将指纹保存到环境变量，供后续步骤使用
+            echo "SIGNING_CERT_THUMBPRINT=$thumbprint" >> $env:GITHUB_ENV
+          } catch {
+            Write-Error "Failed to import certificate to store."
+            exit 1
+          }
+
+      # 2. 构建 MSIX x64
       - name: Build MSIX x64
-        env:
-          SIGNING_CERT: ${{ secrets.SIGNING_CERTIFICATE }}
-          SIGNING_CERT_PWD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
+        shell: pwsh
         run: |
-          $hasCert = "$env:SIGNING_CERT" -ne ""
-          $signingEnabled = if ($hasCert) { "true" } else { "false" }
-          $certParams = if ($hasCert) { 
-            "/p:PackageCertificateKeyFile=${{ github.workspace }}\SigningCertificate.pfx /p:PackageCertificatePassword=$env:SIGNING_CERT_PWD /p:PackageCertificateThumbprint="
-          } else { 
-            "/p:PackageCertificateThumbprint=" 
+          $thumbprint = "$env:SIGNING_CERT_THUMBPRINT"
+          
+          if (-not [string]::IsNullOrWhiteSpace($thumbprint)) {
+            Write-Host "Building SIGNED MSIX (x64)..."
+            # 关键：指定 Thumbprint，并将 KeyFile 设为空，强制使用存储区模式
+            msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=x64 /p:RuntimeIdentifier=win-x64 `
+              /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=true `
+              /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\ `
+              /p:PackageCertificateThumbprint="$thumbprint" /p:PackageCertificateKeyFile="" /p:PackageCertificatePassword=""
+          } else {
+            Write-Host "Building UNSIGNED MSIX (x64)..."
+            msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=x64 /p:RuntimeIdentifier=win-x64 `
+              /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=false `
+              /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\
           }
-          $cmd = "msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=x64 /p:RuntimeIdentifier=win-x64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=$signingEnabled /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\ $certParams"
-          Write-Host "Running: $cmd"
-          Invoke-Expression $cmd
 
+      # 3. 构建 MSIX ARM64
       - name: Build MSIX ARM64
-        env:
-          SIGNING_CERT: ${{ secrets.SIGNING_CERTIFICATE }}
-          SIGNING_CERT_PWD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
+        shell: pwsh
         run: |
-          $hasCert = "$env:SIGNING_CERT" -ne ""
-          $signingEnabled = if ($hasCert) { "true" } else { "false" }
-          $certParams = if ($hasCert) { 
-            "/p:PackageCertificateKeyFile=${{ github.workspace }}\SigningCertificate.pfx /p:PackageCertificatePassword=$env:SIGNING_CERT_PWD /p:PackageCertificateThumbprint="
-          } else { 
-            "/p:PackageCertificateThumbprint=" 
+          $thumbprint = "$env:SIGNING_CERT_THUMBPRINT"
+          
+          if (-not [string]::IsNullOrWhiteSpace($thumbprint)) {
+            Write-Host "Building SIGNED MSIX (ARM64)..."
+            msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=ARM64 /p:RuntimeIdentifier=win-arm64 `
+              /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=true `
+              /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\ `
+              /p:PackageCertificateThumbprint="$thumbprint" /p:PackageCertificateKeyFile="" /p:PackageCertificatePassword=""
+          } else {
+            Write-Host "Building UNSIGNED MSIX (ARM64)..."
+            msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=ARM64 /p:RuntimeIdentifier=win-arm64 `
+              /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=false `
+              /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\
           }
-          $cmd = "msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=ARM64 /p:RuntimeIdentifier=win-arm64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=$signingEnabled /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\ $certParams"
-          Write-Host "Running: $cmd"
-          Invoke-Expression $cmd
 
+      # 4. 导出公钥证书 (供用户安装)
       - name: Export public certificate (.cer)
-        if: ${{ env.HAS_SIGNING_CERT == 'true' }}
+        if: ${{ secrets.SIGNING_CERTIFICATE != '' }}
         env:
-          HAS_SIGNING_CERT: ${{ secrets.SIGNING_CERTIFICATE != '' }}
-          SIGNING_CERT_PWD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
+          SIGNING_PWD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
         run: |
-          $password = ConvertTo-SecureString -String "$env:SIGNING_CERT_PWD" -Force -AsPlainText
-          $cert = Get-PfxCertificate -FilePath "${{ github.workspace }}\SigningCertificate.pfx" -Password $password
-          Export-Certificate -Cert $cert -FilePath "TermiusCN-Tool.cer"
-          Write-Host "Public certificate exported"
+          if (Test-Path "${{ github.workspace }}\SigningCertificate.pfx") {
+            $password = ConvertTo-SecureString -String "$env:SIGNING_PWD" -Force -AsPlainText
+            $cert = Get-PfxCertificate -FilePath "${{ github.workspace }}\SigningCertificate.pfx" -Password $password
+            Export-Certificate -Cert $cert -FilePath "TermiusCN-Tool.cer"
+            Write-Host "Public certificate exported."
+          }
 
       - name: Clean up certificate
         if: always()
@@ -121,7 +158,6 @@ jobs:
       - name: Find and Copy MSIX files
         run: |
           Write-Host "Searching for MSIX files..."
-          Get-ChildItem -Path "." -Filter "*.msix" -Recurse | ForEach-Object { Write-Host $_.FullName }
           
           $msixX64 = Get-ChildItem -Path "." -Filter "*.msix" -Recurse | Where-Object { $_.FullName -like "*x64*" -and $_.FullName -notlike "*ARM64*" } | Select-Object -First 1
           $msixArm64 = Get-ChildItem -Path "." -Filter "*.msix" -Recurse | Where-Object { $_.FullName -like "*ARM64*" } | Select-Object -First 1
@@ -129,15 +165,35 @@ jobs:
           if ($msixX64) {
             Copy-Item $msixX64.FullName -Destination "TermiusCN-Tool-${{ github.ref_name }}-x64.msix"
             Write-Host "Copied x64 MSIX: $($msixX64.FullName)"
-          } else {
-            Write-Host "::warning::x64 MSIX not found"
-          }
+          } else { Write-Host "::warning::x64 MSIX not found" }
           
           if ($msixArm64) {
             Copy-Item $msixArm64.FullName -Destination "TermiusCN-Tool-${{ github.ref_name }}-arm64.msix"
             Write-Host "Copied ARM64 MSIX: $($msixArm64.FullName)"
+          } else { Write-Host "::warning::ARM64 MSIX not found" }
+
+      - name: Create Installer Bundle (x64)
+        run: |
+          $bundleName = "TermiusCN-Tool-${{ github.ref_name }}-Installer-x64.zip"
+          $msixName = "TermiusCN-Tool-${{ github.ref_name }}-x64.msix"
+          
+          if (Test-Path $msixName) {
+            # Create a temporary directory for bundling
+            New-Item -ItemType Directory -Force -Path "InstallerBundle"
+            
+            # Copy files to the bundle directory
+            Copy-Item $msixName -Destination "InstallerBundle\"
+            if (Test-Path "TermiusCN-Tool.cer") { Copy-Item "TermiusCN-Tool.cer" -Destination "InstallerBundle\" }
+            if (Test-Path "Install-App.ps1") { Copy-Item "Install-App.ps1" -Destination "InstallerBundle\" }
+            
+            # Create the zip archive
+            Compress-Archive -Path "InstallerBundle\*" -DestinationPath $bundleName
+            Write-Host "Created Installer Bundle: $bundleName"
+            
+            # Clean up
+            Remove-Item "InstallerBundle" -Recurse -Force
           } else {
-            Write-Host "::warning::ARM64 MSIX not found"
+            Write-Host "::warning::Skipping Installer Bundle creation (x64 MSIX not found)"
           }
 
       - name: List output files
@@ -155,6 +211,7 @@ jobs:
             TermiusCN-Tool-${{ github.ref_name }}-Portable-arm64.zip
             TermiusCN-Tool-${{ github.ref_name }}-x64.msix
             TermiusCN-Tool-${{ github.ref_name }}-arm64.msix
+            TermiusCN-Tool-${{ github.ref_name }}-Installer-x64.zip
             TermiusCN-Tool.cer
             Install-App.ps1
           generate_release_notes: true
@@ -168,12 +225,12 @@ jobs:
             
             #### 安装方法
             **方法一：使用安装脚本（推荐）**
-            1. 下载 `TermiusCN-Tool-${{ github.ref_name }}-x64.msix`、`TermiusCN-Tool.cer` 和 `Install-App.ps1`
-            2. 将三个文件放在同一目录
-            3. 右键 `Install-App.ps1` → 使用 PowerShell 运行（需要管理员权限）
+            1. 下载 `TermiusCN-Tool-${{ github.ref_name }}-Installer-x64.zip`
+            2. 解压所有文件到同一目录
+            3. 右键 `Install-App.ps1` → 使用 PowerShell 运行（会自动提权并安装证书）
             
             **方法二：手动安装**
-            1. 双击 `TermiusCN-Tool.cer` → 安装证书 → 本地计算机 → 受信任的人
+            1. 双击 `TermiusCN-Tool.cer` → 安装证书 → 本地计算机 → **受信任的根证书颁发机构**
             2. 双击 `.msix` 文件安装
             
             **方法三：开发者模式**

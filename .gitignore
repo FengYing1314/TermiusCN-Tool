@@ -44,13 +44,6 @@ _ReSharper*/
 *.appx
 *.appxbundle
 *.appxupload
-*.msix
-*.msixbundle
-*.msixupload
-AppPackages/
-
-# Certificate files (private keys - DO NOT COMMIT)
-*.pfx
 
 # NuGet Packages
 *.nupkg
@@ -161,3 +154,9 @@ __pycache__/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Project Specific
+AppPackages/
+BundleArtifacts/
+*.pfx
+*.cer
