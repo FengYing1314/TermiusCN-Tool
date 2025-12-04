@@ -18,7 +18,7 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -52,61 +52,81 @@ jobs:
       - name: Decode signing certificate
         if: ${{ inputs.build_msix }}
         env:
-          SIGNING_CERT: ${{ secrets.SIGNING_CERTIFICATE }}
+          # 对应 Secret: SIGNING_CERTIFICATE
+          SIGNING_CERT_BASE64: ${{ secrets.SIGNING_CERTIFICATE }}
         run: |
-          if ("$env:SIGNING_CERT" -ne "") {
-            $certBytes = [Convert]::FromBase64String("$env:SIGNING_CERT")
+          if ("$env:SIGNING_CERT_BASE64" -ne "") {
+            $certBytes = [Convert]::FromBase64String("$env:SIGNING_CERT_BASE64")
             [IO.File]::WriteAllBytes("${{ github.workspace }}\SigningCertificate.pfx", $certBytes)
-            Write-Host "Certificate decoded successfully"
+            Write-Host "Certificate decoded successfully to ${{ github.workspace }}\SigningCertificate.pfx"
           } else {
-            Write-Host "No signing certificate configured, will build unsigned MSIX"
+            Write-Host "No signing certificate configured (Secret SIGNING_CERTIFICATE is empty)."
           }
 
       - name: Build MSIX x64
         if: ${{ inputs.build_msix }}
         env:
-          SIGNING_CERT: ${{ secrets.SIGNING_CERTIFICATE }}
-          SIGNING_CERT_PWD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
+          # 对应 Secret: SIGNING_CERTIFICATE_PASSWORD
+          SIGNING_PWD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
         run: |
-          $hasCert = "$env:SIGNING_CERT" -ne ""
-          $signingEnabled = if ($hasCert) { "true" } else { "false" }
-          $certParams = if ($hasCert) { 
-            "/p:PackageCertificateKeyFile=${{ github.workspace }}\SigningCertificate.pfx /p:PackageCertificatePassword=$env:SIGNING_CERT_PWD /p:PackageCertificateThumbprint="
-          } else { 
-            "/p:PackageCertificateThumbprint=" 
+          $pfxPath = "${{ github.workspace }}\SigningCertificate.pfx"
+          if (Test-Path $pfxPath) {
+            Write-Host "Building SIGNED MSIX for x64..."
+            # 直接调用 msbuild，避免 Invoke-Expression 的转义问题
+            msbuild TermiusCN-Tool.csproj /restore `
+              /p:Configuration=Release /p:Platform=x64 /p:RuntimeIdentifier=win-x64 `
+              /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=true `
+              /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly `
+              /p:AppxPackageDir="AppPackages\" `
+              /p:PackageCertificateKeyFile="$pfxPath" `
+              /p:PackageCertificatePassword="$env:SIGNING_PWD"
+          } else {
+            Write-Host "Certificate not found. Building unsigned MSIX for x64..."
+            msbuild TermiusCN-Tool.csproj /restore `
+              /p:Configuration=Release /p:Platform=x64 /p:RuntimeIdentifier=win-x64 `
+              /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=false `
+              /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly `
+              /p:AppxPackageDir="AppPackages\"
           }
-          $cmd = "msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=x64 /p:RuntimeIdentifier=win-x64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=$signingEnabled /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\ $certParams"
-          Write-Host "Running: $cmd"
-          Invoke-Expression $cmd
 
       - name: Build MSIX ARM64
         if: ${{ inputs.build_msix }}
         env:
-          SIGNING_CERT: ${{ secrets.SIGNING_CERTIFICATE }}
-          SIGNING_CERT_PWD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
+          # 对应 Secret: SIGNING_CERTIFICATE_PASSWORD
+          SIGNING_PWD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
         run: |
-          $hasCert = "$env:SIGNING_CERT" -ne ""
-          $signingEnabled = if ($hasCert) { "true" } else { "false" }
-          $certParams = if ($hasCert) { 
-            "/p:PackageCertificateKeyFile=${{ github.workspace }}\SigningCertificate.pfx /p:PackageCertificatePassword=$env:SIGNING_CERT_PWD /p:PackageCertificateThumbprint="
-          } else { 
-            "/p:PackageCertificateThumbprint=" 
+          $pfxPath = "${{ github.workspace }}\SigningCertificate.pfx"
+          if (Test-Path $pfxPath) {
+            Write-Host "Building SIGNED MSIX for ARM64..."
+            msbuild TermiusCN-Tool.csproj /restore `
+              /p:Configuration=Release /p:Platform=ARM64 /p:RuntimeIdentifier=win-arm64 `
+              /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=true `
+              /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly `
+              /p:AppxPackageDir="AppPackages\" `
+              /p:PackageCertificateKeyFile="$pfxPath" `
+              /p:PackageCertificatePassword="$env:SIGNING_PWD"
+          } else {
+            Write-Host "Certificate not found. Building unsigned MSIX for ARM64..."
+            msbuild TermiusCN-Tool.csproj /restore `
+              /p:Configuration=Release /p:Platform=ARM64 /p:RuntimeIdentifier=win-arm64 `
+              /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=false `
+              /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly `
+              /p:AppxPackageDir="AppPackages\"
           }
-          $cmd = "msbuild TermiusCN-Tool.csproj /restore /p:Configuration=Release /p:Platform=ARM64 /p:RuntimeIdentifier=win-arm64 /p:GenerateAppxPackageOnBuild=true /p:AppxPackageSigningEnabled=$signingEnabled /p:AppxBundle=Never /p:UapAppxPackageBuildMode=SideloadOnly /p:AppxPackageDir=AppPackages\ $certParams"
-          Write-Host "Running: $cmd"
-          Invoke-Expression $cmd
 
       - name: Export public certificate (.cer)
         if: ${{ inputs.build_msix }}
         env:
-          SIGNING_CERT: ${{ secrets.SIGNING_CERTIFICATE }}
-          SIGNING_CERT_PWD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
+          SIGNING_CERT_BASE64: ${{ secrets.SIGNING_CERTIFICATE }}
+          SIGNING_PWD: ${{ secrets.SIGNING_CERTIFICATE_PASSWORD }}
         run: |
-          if ("$env:SIGNING_CERT" -ne "") {
-            $password = ConvertTo-SecureString -String "$env:SIGNING_CERT_PWD" -Force -AsPlainText
-            $cert = Get-PfxCertificate -FilePath "${{ github.workspace }}\SigningCertificate.pfx" -Password $password
-            Export-Certificate -Cert $cert -FilePath "TermiusCN-Tool.cer"
-            Write-Host "Public certificate exported"
+          if ("$env:SIGNING_CERT_BASE64" -ne "") {
+            if (Test-Path "${{ github.workspace }}\SigningCertificate.pfx") {
+               $password = ConvertTo-SecureString -String "$env:SIGNING_PWD" -Force -AsPlainText
+               $cert = Get-PfxCertificate -FilePath "${{ github.workspace }}\SigningCertificate.pfx" -Password $password
+               Export-Certificate -Cert $cert -FilePath "TermiusCN-Tool.cer"
+               Write-Host "Public certificate exported successfully"
+            }
           }
 
       - name: Clean up certificate
@@ -114,6 +134,7 @@ jobs:
         run: |
           if (Test-Path "${{ github.workspace }}\SigningCertificate.pfx") {
             Remove-Item "${{ github.workspace }}\SigningCertificate.pfx" -Force
+            Write-Host "Certificate deleted."
           }
 
       - name: Find and Copy MSIX files
@@ -139,7 +160,7 @@ jobs:
         run: |
           Write-Host "=== Build Artifacts ==="
           Get-ChildItem -Path "." -Filter "TermiusCN-Tool*" -File | ForEach-Object { 
-            Write-Host "$($_.Name) - $([math]::Round($_.Length / 1MB, 2)) MB"
+             Write-Host "$($_.Name) - $([math]::Round($_.Length / 1MB, 2)) MB"
           }
 
       # ========== 上传构建产物 ==========
