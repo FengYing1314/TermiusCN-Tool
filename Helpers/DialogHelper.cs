@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 
 namespace TermiusCN_Tool.Helpers;
 
@@ -27,10 +28,17 @@ public static class DialogHelper
     {
         if (_xamlRoot == null) return;
 
+        var content = new TextBlock
+        {
+            Text = message,
+            TextWrapping = TextWrapping.Wrap,
+            IsTextSelectionEnabled = true
+        };
+
         var dialog = new ContentDialog
         {
             Title = title,
-            Content = message,
+            Content = content,
             CloseButtonText = "确定",
             XamlRoot = _xamlRoot,
             DefaultButton = ContentDialogButton.Close
@@ -46,10 +54,17 @@ public static class DialogHelper
     {
         if (_xamlRoot == null) return;
 
+        var content = new TextBlock
+        {
+            Text = message,
+            TextWrapping = TextWrapping.Wrap,
+            IsTextSelectionEnabled = true
+        };
+
         var dialog = new ContentDialog
         {
             Title = $"❌ {title}",
-            Content = message,
+            Content = content,
             CloseButtonText = "确定",
             XamlRoot = _xamlRoot,
             DefaultButton = ContentDialogButton.Close
@@ -66,10 +81,17 @@ public static class DialogHelper
     {
         if (_xamlRoot == null) return false;
 
+        var content = new TextBlock
+        {
+            Text = message,
+            TextWrapping = TextWrapping.Wrap,
+            IsTextSelectionEnabled = true
+        };
+
         var dialog = new ContentDialog
         {
             Title = title,
-            Content = message,
+            Content = content,
             PrimaryButtonText = "确认",
             CloseButtonText = "取消",
             XamlRoot = _xamlRoot,
@@ -88,10 +110,17 @@ public static class DialogHelper
     {
         if (_xamlRoot == null) return false;
 
+        var content = new TextBlock
+        {
+            Text = message,
+            TextWrapping = TextWrapping.Wrap,
+            IsTextSelectionEnabled = true
+        };
+
         var dialog = new ContentDialog
         {
             Title = $"⚠️ {title}",
-            Content = message,
+            Content = content,
             PrimaryButtonText = "继续",
             CloseButtonText = "取消",
             XamlRoot = _xamlRoot,
@@ -109,10 +138,19 @@ public static class DialogHelper
     {
         if (_xamlRoot == null) return;
 
+        var message = "文件已成功替换！\n\n请重启 Termius 使汉化生效。\n如需还原，请前往「备份管理」页面。";
+
+        var content = new TextBlock
+        {
+            Text = message,
+            TextWrapping = TextWrapping.Wrap,
+            IsTextSelectionEnabled = true
+        };
+
         var dialog = new ContentDialog
         {
             Title = "✅ 汉化完成",
-            Content = "文件已成功替换！\n\n请重启 Termius 使汉化生效。\n如需还原，请前往「备份管理」页面。",
+            Content = content,
             CloseButtonText = "知道了",
             XamlRoot = _xamlRoot,
             DefaultButton = ContentDialogButton.Close

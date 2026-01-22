@@ -54,7 +54,12 @@ public partial class SettingsViewModel : ObservableObject
             _config = await _configService.LoadConfigAsync();
 
             CustomPath = _config.CustomTermiusPath;
-            DefaultTypeIndex = (int)_config.DefaultLocalizeType;
+            
+            // 兼容性处理：限制枚举范围在 0-2 之间
+            int typeIndex = (int)_config.DefaultLocalizeType;
+            if (typeIndex < 0 || typeIndex > 2) typeIndex = 1; // 默认回退到试用版
+            DefaultTypeIndex = typeIndex;
+
             AutoCheckUpdate = _config.AutoCheckUpdate;
             ShowWarnings = _config.ShowWarnings;
             ProxyAddress = _config.ProxyAddress;
@@ -133,7 +138,18 @@ public partial class SettingsViewModel : ObservableObject
 
             if (System.IO.Directory.Exists(appDataDir))
             {
-                System.IO.Directory.Delete(appDataDir, true);
+                // 尝试删除整个文件夹
+                try 
+                {
+                    System.IO.Directory.Delete(appDataDir, true);
+                }
+                catch (IOException ioEx)
+                {
+                    // 如果文件被占用，提示用户
+                    await DialogHelper.ShowErrorAsync("清除部分失败", $"某些文件正被占用，无法删除。\n错误: {ioEx.Message}\n\n应用将继续退出。");
+                    Application.Current.Exit();
+                    return;
+                }
             }
 
             await DialogHelper.ShowSuccessAsync("清除成功", "所有数据已清除，应用即将退出。");

@@ -10,7 +10,12 @@ namespace TermiusCN_Tool.Services;
 public interface IFileManager
 {
     /// <summary>
-    /// 备份 app.asar 文件
+    /// 获取备份文件夹路径
+    /// </summary>
+    string BackupDirectory { get; }
+
+    /// <summary>
+    /// 备份 app.asar
     /// </summary>
     /// <param name="asarPath">app.asar 文件路径</param>
     /// <param name="version">Termius 版本号</param>

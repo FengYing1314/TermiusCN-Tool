@@ -18,14 +18,6 @@
                 Severity="{x:Bind ViewModel.StatusSeverity, Mode=OneWay}"
                 Message="{x:Bind ViewModel.StatusMessage, Mode=OneWay}"/>
 
-            <!-- 操作按钮栏 -->
-            <CommandBar DefaultLabelPosition="Right" Background="Transparent" IsOpen="False">
-                <AppBarButton Icon="Refresh" Label="刷新状态"
-                             Command="{x:Bind ViewModel.RefreshCommand}"/>
-                <AppBarButton Icon="Repair" Label="调试信息"
-                             Command="{x:Bind ViewModel.ShowDebugInfoCommand}"/>
-            </CommandBar>
-
             <!-- 版本信息卡片 -->
             <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
@@ -62,45 +54,67 @@
                 </StackPanel>
             </Border>
 
-            <!-- 汉化类型选择 -->
+            <!-- 汉化方式与类型 -->
             <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                     BorderThickness="1"
                     CornerRadius="8"
-                    Padding="20">
-                <StackPanel Spacing="16">
-                    <TextBlock Text="选择汉化类型" 
-                              Style="{StaticResource SubtitleTextBlockStyle}"
-                              FontWeight="SemiBold"/>
+                    Padding="0">
+                <StackPanel>
+                    <!-- 方式选择 (Pivot) -->
+                    <Pivot SelectedIndex="{x:Bind ViewModel.SelectedBuildModeIndex, Mode=TwoWay}" 
+                           Padding="20,10,20,0">
+                        <PivotItem Header="☁️ 云端下载">
+                            <StackPanel Spacing="8" Margin="0,12,0,20">
+                                <TextBlock Text="🚀 推荐方式：直接从 GitHub 下载最新编译好的汉化包。" 
+                                          Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                <TextBlock Text="• 速度快，无需额外环境" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                            </StackPanel>
+                        </PivotItem>
+                        <PivotItem Header="🛠️ 本地构建">
+                            <StackPanel Spacing="12" Margin="0,12,0,20">
+                                <TextBlock Text="🔧 进阶方式：下载规则脚本，在本地解包并修改 app.asar。" 
+                                          Foreground="{ThemeResource TextFillColorSecondaryBrush}" TextWrapping="Wrap"/>
+                                <TextBlock Text="• 更灵活，支持任意版本" FontSize="12" Foreground="{ThemeResource TextFillColorTertiaryBrush}"/>
+                                
+                                <InfoBar Severity="Warning" IsOpen="True" IsClosable="False" Title="环境要求">
+                                    <InfoBar.Content>
+                                        <StackPanel Spacing="8" Margin="0,0,0,8">
+                                            <TextBlock Text="本功能依赖 Node.js 和 asar 工具。" TextWrapping="Wrap"/>
+                                            <TextBlock Text="请在终端执行以下命令安装 asar：" FontSize="12"/>
+                                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" HorizontalAlignment="Stretch">
+                                                <TextBox Text="npm install -g @electron/asar" 
+                                                         IsReadOnly="True" 
+                                                         BorderThickness="1"
+                                                         VerticalAlignment="Center"/>
+                                                <Button Grid.Column="1" 
+                                                        Content="复制" 
+                                                        Command="{x:Bind ViewModel.CopyCommandCommand}"
+                                                        CommandParameter="npm install -g @electron/asar"
+                                                        VerticalAlignment="Center"/>
+                                            </Grid>
+                                        </StackPanel>
+                                    </InfoBar.Content>
+                                </InfoBar>
+                            </StackPanel>
+                        </PivotItem>
+                    </Pivot>
 
-                <RadioButtons SelectedIndex="{x:Bind ViewModel.SelectedTypeIndex, Mode=TwoWay}">
-                    <RadioButton>
-                        <StackPanel>
-                            <TextBlock Text="标准版 (仅汉化)" FontWeight="SemiBold"/>
-                            <TextBlock Text="适合有会员资格的用户，保留所有原始功能"
-                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                     FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"/>
-                        </StackPanel>
-                    </RadioButton>
+                    <!-- 分隔线 -->
+                    <Border Height="1" Background="{ThemeResource CardStrokeColorDefaultBrush}"/>
 
-                    <RadioButton>
-                        <StackPanel>
-                            <TextBlock Text="试用版 (推荐)" FontWeight="SemiBold"/>
-                            <TextBlock Text="汉化界面并隐藏 'Upgrade now' 等碍眼按钮"
-                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                     FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"/>
-                        </StackPanel>
-                    </RadioButton>
-
-                    <RadioButton>
-                        <StackPanel>
-                            <TextBlock Text="离线版 (跳过登录)" FontWeight="SemiBold"/>
-                            <TextBlock Text="支持完全离线使用，跳过登录验证"
-                                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                     FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"/>
-                        </StackPanel>
-                    </RadioButton>
-                </RadioButtons>
+                    <!-- 类型选择 -->
+                    <StackPanel Padding="20" Spacing="16">
+                        <TextBlock Text="选择功能类型" 
+                                  Style="{StaticResource SubtitleTextBlockStyle}"
+                                  FontWeight="SemiBold"/>
+                        
+                        <RadioButtons SelectedIndex="{x:Bind ViewModel.SelectedTypeIndex, Mode=TwoWay}">
+                            <RadioButton Content="标准版 (仅基础汉化)"/>
+                            <RadioButton Content="试用版 (汉化 + 解锁试用功能)"/>
+                            <RadioButton Content="离线版 (汉化 + 跳过登录限制)"/>
+                        </RadioButtons>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 

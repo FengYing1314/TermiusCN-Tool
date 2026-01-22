@@ -163,27 +163,53 @@ public partial class BackupViewModel : ObservableObject
     {
         try
         {
-            var backupDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "TermiusCN-Tool",
-                "Backups");
+            var backupDir = _fileManager.BackupDirectory;
 
             if (!Directory.Exists(backupDir))
             {
                 Directory.CreateDirectory(backupDir);
             }
 
-            var startInfo = new System.Diagnostics.ProcessStartInfo
+            // 检查文件夹是否为空，给予用户提示
+            var files = Directory.GetFiles(backupDir);
+            if (files.Length == 0)
             {
-                FileName = backupDir,
-                UseShellExecute = true,
-                Verb = "open"
-            };
-            System.Diagnostics.Process.Start(startInfo);
+                // 不阻止打开，只是提示一下
+                await DialogHelper.ShowWarningAsync("提示", "备份文件夹目前为空。\n\n当您执行「一键汉化」操作时，原版文件会自动备份到此处。");
+            }
+
+            // 方法 1: 使用 WinUI 推荐的 Launcher API
+            try 
+            {
+                var folder = await Windows.Storage.StorageFolder.GetFolderFromPathAsync(backupDir);
+                var success = await Windows.System.Launcher.LaunchFolderAsync(folder);
+                if (success) return;
+            }
+            catch
+            {
+                // 忽略 Launcher 错误，尝试降级方案
+            }
+
+            // 方法 2: 显式调用 explorer.exe
+            try
+            {
+                var startInfo = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"\"{backupDir}\"",
+                    UseShellExecute = false // 调用可执行文件时不需要 ShellExecute
+                };
+                System.Diagnostics.Process.Start(startInfo);
+            }
+            catch (Exception ex)
+            {
+                await DialogHelper.ShowErrorAsync("打开失败", 
+                    $"所有打开方式均失败。\n路径: {backupDir}\n错误: {ex.Message}");
+            }
         }
         catch (Exception ex)
         {
-            await DialogHelper.ShowErrorAsync("打开失败", $"无法打开备份文件夹: {ex.Message}");
+            await DialogHelper.ShowErrorAsync("系统错误", $"操作失败: {ex.Message}");
         }
     }
 }

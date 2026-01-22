@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Windows.ApplicationModel.DataTransfer;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Xaml.Controls;
@@ -19,12 +20,16 @@ public partial class MainViewModel : ObservableObject
     private readonly IFileManager _fileManager;
     private readonly IProcessManager _processManager;
     private readonly IConfigService _configService;
+    private readonly ILocalLocalizeService _localLocalizeService;
 
     [ObservableProperty]
     private string currentVersion = "检测中...";
 
     [ObservableProperty]
     private string availableVersion = "检查中...";
+
+    [ObservableProperty]
+    private int selectedBuildModeIndex = 0; // 0: Cloud, 1: Local
 
     [ObservableProperty]
     private int selectedTypeIndex = 1; // 默认选择"试用版"
@@ -54,13 +59,15 @@ public partial class MainViewModel : ObservableObject
         IGitHubService githubService,
         IFileManager fileManager,
         IProcessManager processManager,
-        IConfigService configService)
+        IConfigService configService,
+        ILocalLocalizeService localLocalizeService)
     {
         _detector = detector;
         _githubService = githubService;
         _fileManager = fileManager;
         _processManager = processManager;
         _configService = configService;
+        _localLocalizeService = localLocalizeService;
 
         // 初始化时检测
         _ = InitializeAsync();
@@ -69,8 +76,15 @@ public partial class MainViewModel : ObservableObject
     private async Task InitializeAsync()
     {
         var config = await _configService.LoadConfigAsync();
-        SelectedTypeIndex = (int)config.DefaultLocalizeType;
-
+        
+        // 读取配置中的默认类型，并进行范围检查 (0-2)
+        int typeIndex = (int)config.DefaultLocalizeType;
+        if (typeIndex < 0 || typeIndex > 2)
+        {
+            typeIndex = 1; // 默认回退到试用版
+        }
+        SelectedTypeIndex = typeIndex;
+        
         await DetectTermiusAsync();
         await CheckLatestVersionAsync();
     }
@@ -91,6 +105,21 @@ public partial class MainViewModel : ObservableObject
             {
                 await DialogHelper.ShowErrorAsync("未找到 Termius", "请确保已安装 Termius，或在设置中指定自定义路径");
                 return;
+            }
+
+            var localizeType = (LocalizeType)SelectedTypeIndex;
+            bool isLocalBuild = SelectedBuildModeIndex == 1;
+
+            // ** 新增: 检查本地构建环境 (asar) **
+            if (isLocalBuild)
+            {
+                ProgressMessage = "正在检查构建环境...";
+                if (!await _localLocalizeService.IsAsarAvailableAsync())
+                {
+                    await DialogHelper.ShowErrorAsync("环境缺失", 
+                        "未找到 asar 命令。\n\n本地构建功能需要您先安装 Node.js 和 asar 工具。\n请在终端运行: npm install -g @electron/asar");
+                    return;
+                }
             }
 
             // 2. 关闭进程
@@ -119,14 +148,26 @@ public partial class MainViewModel : ObservableObject
             ProgressMessage = "正在备份原文件...";
             await _fileManager.BackupAsync(_terminusInfo.AsarPath, _terminusInfo.Version);
 
-            // 4. 下载
-            ProgressMessage = "正在下载汉化文件...";
-            var localizeType = (LocalizeType)SelectedTypeIndex;
-            var tempFile = await _githubService.DownloadLocalizeFileAsync(_terminusInfo.Version, localizeType);
+            string targetFile;
+
+            // 4. 获取文件 (下载或本地构建)
+            if (isLocalBuild)
+            {
+                ProgressMessage = "正在下载规则文件...";
+                await _localLocalizeService.DownloadRulesAsync();
+
+                ProgressMessage = "正在执行本地构建 (解包/修改/打包)...";
+                targetFile = await _localLocalizeService.ExecuteLocalizeAsync(_terminusInfo.AsarPath, localizeType);
+            }
+            else
+            {
+                ProgressMessage = "正在下载汉化文件...";
+                targetFile = await _githubService.DownloadLocalizeFileAsync(_terminusInfo.Version, localizeType);
+            }
 
             // 5. 替换
             ProgressMessage = "正在替换文件...";
-            await _fileManager.ReplaceAsync(tempFile, _terminusInfo.AsarPath);
+            await _fileManager.ReplaceAsync(targetFile, _terminusInfo.AsarPath);
 
             // 6. 完成
             ProgressMessage = "汉化完成！";
@@ -227,6 +268,16 @@ public partial class MainViewModel : ObservableObject
 
         await DetectTermiusAsync();
         await CheckLatestVersionAsync();
+    }
+
+    [RelayCommand]
+    private void CopyCommand(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return;
+        
+        var dataPackage = new DataPackage();
+        dataPackage.SetText(text);
+        Clipboard.SetContent(dataPackage);
     }
 
     [RelayCommand]

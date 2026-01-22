@@ -54,12 +54,12 @@
             <!-- 默认汉化类型 -->
             <StackPanel Spacing="8">
                 <TextBlock Text="默认汉化类型" Style="{StaticResource SubtitleTextBlockStyle}"/>
-                <ComboBox SelectedIndex="{x:Bind ViewModel.DefaultTypeIndex, Mode=TwoWay}"
-                         HorizontalAlignment="Stretch">
-                    <ComboBoxItem Content="标准版 (仅汉化)"/>
-                    <ComboBoxItem Content="试用版 (推荐)"/>
-                    <ComboBoxItem Content="离线版 (跳过登录)"/>
-                </ComboBox>
+                        <ComboBox SelectedIndex="{x:Bind ViewModel.DefaultTypeIndex, Mode=TwoWay}"
+                                  HorizontalAlignment="Left" Width="200">
+                            <ComboBoxItem Content="标准版 (仅汉化)"/>
+                            <ComboBoxItem Content="试用版 (推荐)"/>
+                            <ComboBoxItem Content="离线版 (跳过登录)"/>
+                        </ComboBox>
                 <TextBlock Text="设置启动时默认选中的汉化版本类型"
                           FontSize="12"
                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>

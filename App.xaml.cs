@@ -56,6 +56,7 @@ public partial class App : Application
         services.AddSingleton<IGitHubService, GitHubService>();
         services.AddSingleton<IFileManager, FileManager>();
         services.AddSingleton<IProcessManager, ProcessManager>();
+        services.AddSingleton<ILocalLocalizeService, LocalLocalizeService>();
 
         // 注册 ViewModels（瞬态）
         services.AddTransient<ViewModels.MainViewModel>();

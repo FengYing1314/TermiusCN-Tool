@@ -160,3 +160,9 @@ AppPackages/
 BundleArtifacts/
 *.pfx
 *.cer
+
+# Environment Variables
+.env
+
+# Context Files
+GEMINI.md
